@@ -7,12 +7,8 @@ import { Spinner } from "./components/ui";
 export default function App() {
   const { session, profile, loading, signOut } = useAuth();
 
-  // Đăng ký Service Worker khi app load
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(console.error);
-    }
-  }, []);
+  // Service Worker do vite-plugin-pwa tự đăng ký (registerType: autoUpdate)
+  // Push notification handler được inject qua workbox
 
   if (loading) return <Spinner />;
 

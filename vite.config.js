@@ -6,17 +6,33 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // Dùng sw.js tự viết thay vì auto-generate để kiểm soát push notification
-      strategies: "injectManifest",
-      srcDir: "public",
-      filename: "sw.js",
-      injectManifest: {
+      registerType: "autoUpdate",
+      // Plugin tự generate service worker, không dùng sw.js tự viết
+      strategies: "generateSW",
+      workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Không cache Supabase API calls
+        navigateFallback: "/index.html",
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/axdtrarcovdhjdkiqjvx\.supabase\.co\/.*/i,
+            handler: "NetworkOnly",
+          },
+        ],
       },
-      manifest: false, // manifest.json đã có trong public/
-      devOptions: {
-        enabled: true,
-        type: "module",
+      manifest: {
+        name: "TaskHub - Vận hành Khách sạn",
+        short_name: "TaskHub",
+        description: "Quản lý công việc liên bộ phận khách sạn",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#14110D",
+        theme_color: "#C9A227",
+        orientation: "portrait",
+        icons: [
+          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+        ],
       },
     }),
   ],
