@@ -1,0 +1,26 @@
+# Biến môi trường - KHÔNG commit lên git
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Vite cache
+.vite/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Supabase local dev (nếu dùng)
+supabase/.branches
+supabase/.temp
