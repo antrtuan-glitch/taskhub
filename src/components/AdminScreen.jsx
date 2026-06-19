@@ -75,7 +75,10 @@ function CreateStaffForm({ departments, onCreated }) {
         body: { email, password, full_name: fullName.trim(), department_id: deptId || null },
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (fnErr) throw fnErr;
+      if (fnErr) {
+        const body = await fnErr.context?.json?.().catch(() => null);
+        throw new Error(body?.error || fnErr.message);
+      }
       if (data?.error) throw new Error(data.error);
       setFullName(""); setEmail(""); setPassword(""); setDeptId("");
       onCreated();
