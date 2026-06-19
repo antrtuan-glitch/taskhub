@@ -37,6 +37,19 @@ export default function TaskHub({ profile, onSignOut }) {
     fetchTasks();
   }, []);
 
+  // iOS/Safari tạm ngưng WebSocket khi app chạy nền - fetch lại khi quay lại foreground
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") fetchTasks();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, []);
+
   // Realtime: lắng nghe thay đổi tasks
   useEffect(() => {
     const channel = supabase.channel("tasks-global")
