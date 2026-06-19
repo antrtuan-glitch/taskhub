@@ -7,15 +7,25 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
   if (!token) {
-    return new Response(JSON.stringify({ error: "Thiếu Authorization token" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Thiếu Authorization token" }), { status: 401, headers: corsHeaders });
   }
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -23,7 +33,7 @@ Deno.serve(async (req) => {
   // Xác thực người gọi và kiểm tra role admin
   const { data: caller, error: callerErr } = await admin.auth.getUser(token);
   if (callerErr || !caller?.user) {
-    return new Response(JSON.stringify({ error: "Token không hợp lệ" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Token không hợp lệ" }), { status: 401, headers: corsHeaders });
   }
 
   const { data: callerProfile } = await admin
@@ -33,12 +43,12 @@ Deno.serve(async (req) => {
     .single();
 
   if (callerProfile?.role !== "admin") {
-    return new Response(JSON.stringify({ error: "Chỉ admin mới được tạo tài khoản" }), { status: 403 });
+    return new Response(JSON.stringify({ error: "Chỉ admin mới được tạo tài khoản" }), { status: 403, headers: corsHeaders });
   }
 
   const { email, password, full_name, department_id } = await req.json();
   if (!email || !password || !full_name) {
-    return new Response(JSON.stringify({ error: "Thiếu email, password hoặc họ tên" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "Thiếu email, password hoặc họ tên" }), { status: 400, headers: corsHeaders });
   }
 
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
@@ -49,10 +59,10 @@ Deno.serve(async (req) => {
   });
 
   if (createErr) {
-    return new Response(JSON.stringify({ error: createErr.message }), { status: 400 });
+    return new Response(JSON.stringify({ error: createErr.message }), { status: 400, headers: corsHeaders });
   }
 
   return new Response(JSON.stringify({ user: created.user }), {
-    headers: { "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
