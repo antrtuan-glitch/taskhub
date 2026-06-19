@@ -11,8 +11,10 @@ function urlB64ToUint8Array(base64String) {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
+const hasNotificationApi = typeof Notification !== "undefined";
+
 export function usePushNotification(userId) {
-  const [permission, setPermission] = useState(Notification.permission);
+  const [permission, setPermission] = useState(hasNotificationApi ? Notification.permission : "unsupported");
 
   useEffect(() => {
     // Tự động đăng ký nếu đã được cấp quyền trước đó
@@ -22,6 +24,10 @@ export function usePushNotification(userId) {
   }, [userId]);
 
   async function requestAndSubscribe() {
+    if (!hasNotificationApi) {
+      console.warn("Trình duyệt này không hỗ trợ Notification API");
+      return;
+    }
     if (!VAPID_PUBLIC_KEY) {
       console.warn("Chưa cấu hình VITE_VAPID_PUBLIC_KEY");
       return;
