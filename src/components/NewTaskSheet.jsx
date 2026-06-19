@@ -23,14 +23,28 @@ export default function NewTaskSheet({ onClose, profile }) {
     setLoading(true);
     setError("");
     try {
-      const { error: err } = await supabase.from("tasks").insert({
-        title: title.trim(),
-        current_department_id: deptId,
-        status: "todo",
-        deadline: new Date(Date.now() + hours * H).toISOString(),
-        created_by: profile.id,
-      });
+      const { data: task, error: err } = await supabase
+        .from("tasks")
+        .insert({
+          title: title.trim(),
+          current_department_id: deptId,
+          status: "todo",
+          deadline: new Date(Date.now() + hours * H).toISOString(),
+          created_by: profile.id,
+        })
+        .select()
+        .single();
       if (err) throw err;
+
+      // Tạo dòng "khởi tạo" trong lịch sử bàn giao để kích hoạt thông báo cho bộ phận được giao
+      await supabase.from("task_handoffs").insert({
+        task_id: task.id,
+        from_department_id: null,
+        to_department_id: deptId,
+        handed_by: profile.id,
+        note: "Khởi tạo công việc",
+      });
+
       onClose();
     } catch (err) {
       setError(err.message);
