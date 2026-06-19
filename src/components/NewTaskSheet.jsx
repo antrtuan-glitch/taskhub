@@ -14,19 +14,21 @@ export default function NewTaskSheet({ onClose, profile }) {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [images, setImages] = useState([]); // [{ file, preview }]
+  const MAX_IMAGES = 5;
 
-  function handlePickImage(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+  function handlePickImages(e) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setImages((prev) => {
+      const room = MAX_IMAGES - prev.length;
+      return [...prev, ...files.slice(0, room).map((file) => ({ file, preview: URL.createObjectURL(file) }))];
+    });
+    e.target.value = "";
   }
 
-  function clearImage() {
-    setImageFile(null);
-    setImagePreview(null);
+  function removeImage(idx) {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
   }
 
   useEffect(() => {
@@ -38,14 +40,6 @@ export default function NewTaskSheet({ onClose, profile }) {
     setLoading(true);
     setError("");
     try {
-      let imageUrl = null;
-      if (imageFile) {
-        const path = `${profile.id}/${Date.now()}-${imageFile.name}`;
-        const { error: upErr } = await supabase.storage.from("task-images").upload(path, imageFile);
-        if (upErr) throw upErr;
-        imageUrl = supabase.storage.from("task-images").getPublicUrl(path).data.publicUrl;
-      }
-
       const { data: task, error: err } = await supabase
         .from("tasks")
         .insert({
@@ -54,11 +48,19 @@ export default function NewTaskSheet({ onClose, profile }) {
           status: "todo",
           deadline: new Date(Date.now() + hours * H).toISOString(),
           created_by: profile.id,
-          image_url: imageUrl,
         })
         .select()
         .single();
       if (err) throw err;
+
+      // Upload ảnh (nếu có) và lưu vào task_images
+      for (const { file } of images) {
+        const path = `${profile.id}/${task.id}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("task-images").upload(path, file);
+        if (upErr) continue;
+        const url = supabase.storage.from("task-images").getPublicUrl(path).data.publicUrl;
+        await supabase.from("task_images").insert({ task_id: task.id, path, url });
+      }
 
       // Tạo dòng "khởi tạo" trong lịch sử bàn giao để hiện trong timeline
       const { data: handoff } = await supabase
@@ -111,23 +113,24 @@ export default function NewTaskSheet({ onClose, profile }) {
         ))}
       </div>
 
-      <label style={labelStyle}>Ảnh đính kèm (tùy chọn)</label>
-      <div style={{ marginBottom: 18 }}>
-        {imagePreview ? (
-          <div style={{ position: "relative", width: 120 }}>
-            <img src={imagePreview} alt="" style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 12, border: `1px solid ${COLORS.border}` }} />
+      <label style={labelStyle}>Ảnh đính kèm (tùy chọn, tối đa {MAX_IMAGES} ảnh)</label>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+        {images.map((img, idx) => (
+          <div key={idx} style={{ position: "relative", width: 90 }}>
+            <img src={img.preview} alt="" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 12, border: `1px solid ${COLORS.border}` }} />
             <button
-              onClick={clearImage}
-              style={{ position: "absolute", top: -8, right: -8, background: COLORS.red, border: "none", borderRadius: "50%", width: 24, height: 24, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onClick={() => removeImage(idx)}
+              style={{ position: "absolute", top: -8, right: -8, background: COLORS.red, border: "none", borderRadius: "50%", width: 22, height: 22, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
-              <X size={14} />
+              <X size={12} />
             </button>
           </div>
-        ) : (
-          <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: 120, height: 120, borderRadius: 12, border: `1px dashed ${COLORS.border}`, color: COLORS.faint, cursor: "pointer", fontSize: 12, flexDirection: "column" }}>
-            <ImageIcon size={22} />
-            Chọn ảnh
-            <input type="file" accept="image/*" onChange={handlePickImage} style={{ display: "none" }} />
+        ))}
+        {images.length < MAX_IMAGES && (
+          <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: 90, height: 90, borderRadius: 12, border: `1px dashed ${COLORS.border}`, color: COLORS.faint, cursor: "pointer", fontSize: 11, flexDirection: "column" }}>
+            <ImageIcon size={20} />
+            Thêm ảnh
+            <input type="file" accept="image/*" multiple onChange={handlePickImages} style={{ display: "none" }} />
           </label>
         )}
       </div>

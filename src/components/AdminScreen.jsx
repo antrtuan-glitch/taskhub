@@ -267,6 +267,7 @@ function TasksTab() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [historyTask, setHistoryTask] = useState(null);
   const [history, setHistory] = useState([]);
+  const [images, setImages] = useState([]);
 
   useEffect(() => { load(); }, []);
 
@@ -279,9 +280,20 @@ function TasksTab() {
   }
 
   async function deleteTask(id) {
+    // Xóa ảnh trong Storage trước (task_images sẽ tự xóa theo cascade)
+    const { data: imgs } = await supabase.from("task_images").select("path").eq("task_id", id);
+    if (imgs?.length) {
+      await supabase.storage.from("task-images").remove(imgs.map((i) => i.path));
+    }
     await supabase.from("tasks").delete().eq("id", id);
     setConfirmDelete(null);
     load();
+  }
+
+  async function deleteImage(img) {
+    await supabase.storage.from("task-images").remove([img.path]);
+    await supabase.from("task_images").delete().eq("id", img.id);
+    setImages((prev) => prev.filter((i) => i.id !== img.id));
   }
 
   async function showHistory(task) {
@@ -292,6 +304,9 @@ function TasksTab() {
       .eq("task_id", task.id)
       .order("created_at");
     setHistory(data ?? []);
+
+    const { data: imgs } = await supabase.from("task_images").select("*").eq("task_id", task.id).order("created_at");
+    setImages(imgs ?? []);
   }
 
   return (
@@ -330,6 +345,23 @@ function TasksTab() {
         <div onClick={() => setHistoryTask(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: "90%", maxWidth: 380, maxHeight: "70vh", overflowY: "auto", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 18 }}>
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Lịch sử bàn giao: {historyTask.title}</div>
+
+            {images.length > 0 && (
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 16 }}>
+                {images.map((img) => (
+                  <div key={img.id} style={{ position: "relative", flexShrink: 0 }}>
+                    <img src={img.url} alt="" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 10, border: `1px solid ${COLORS.border}` }} />
+                    <button
+                      onClick={() => deleteImage(img)}
+                      style={{ position: "absolute", top: -6, right: -6, background: COLORS.red, border: "none", borderRadius: "50%", width: 20, height: 20, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {history.length === 0 && <div style={{ fontSize: 13, color: COLORS.faint }}>Chưa có lần bàn giao nào.</div>}
             {history.map((h) => (
               <div key={h.id} style={{ fontSize: 13, padding: "8px 0", borderBottom: `1px solid ${COLORS.border}` }}>

@@ -29,6 +29,7 @@ export default function DetailSheet({ task: initialTask, profile, onClose }) {
   const [task, setTask] = useState(initialTask);
   const [comments, setComments] = useState([]);
   const [handoffs, setHandoffs] = useState([]);
+  const [images, setImages] = useState([]);
   const [msg, setMsg] = useState("");
   const [showHandoff, setShowHandoff] = useState(false);
   const [tab, setTab] = useState("comments"); // "comments" | "timeline"
@@ -56,6 +57,13 @@ export default function DetailSheet({ task: initialTask, profile, onClose }) {
       .eq("task_id", initialTask.id)
       .order("created_at")
       .then(({ data }) => data && setHandoffs(data));
+
+    supabase
+      .from("task_images")
+      .select("*")
+      .eq("task_id", initialTask.id)
+      .order("created_at")
+      .then(({ data }) => data && setImages(data));
   }, [initialTask.id]);
 
   // Realtime: comments mới + cập nhật task
@@ -124,13 +132,18 @@ export default function DetailSheet({ task: initialTask, profile, onClose }) {
           )}
         </div>
 
-        {task.image_url && (
-          <img
-            src={task.image_url}
-            alt=""
-            onClick={() => window.open(task.image_url, "_blank")}
-            style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 12, border: `1px solid ${COLORS.border}`, marginBottom: 16, cursor: "pointer" }}
-          />
+        {images.length > 0 && (
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 16 }}>
+            {images.map((img) => (
+              <img
+                key={img.id}
+                src={img.url}
+                alt=""
+                onClick={() => window.open(img.url, "_blank")}
+                style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 12, border: `1px solid ${COLORS.border}`, cursor: "pointer", flexShrink: 0 }}
+              />
+            ))}
+          </div>
         )}
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
