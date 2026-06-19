@@ -1,6 +1,7 @@
 // Sheet tạo task mới
 // Bất kỳ nhân viên nào cũng tạo được, chọn bộ phận bắt đầu xử lý
 import { useState, useEffect } from "react";
+import { Image as ImageIcon, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { Sheet, Chip, COLORS, inputStyle, labelStyle, PrimaryButton } from "./ui";
 
@@ -13,6 +14,20 @@ export default function NewTaskSheet({ onClose, profile }) {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  function handlePickImage(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function clearImage() {
+    setImageFile(null);
+    setImagePreview(null);
+  }
 
   useEffect(() => {
     supabase.from("departments").select("*").then(({ data }) => data && setDepartments(data));
@@ -23,6 +38,14 @@ export default function NewTaskSheet({ onClose, profile }) {
     setLoading(true);
     setError("");
     try {
+      let imageUrl = null;
+      if (imageFile) {
+        const path = `${profile.id}/${Date.now()}-${imageFile.name}`;
+        const { error: upErr } = await supabase.storage.from("task-images").upload(path, imageFile);
+        if (upErr) throw upErr;
+        imageUrl = supabase.storage.from("task-images").getPublicUrl(path).data.publicUrl;
+      }
+
       const { data: task, error: err } = await supabase
         .from("tasks")
         .insert({
@@ -31,6 +54,7 @@ export default function NewTaskSheet({ onClose, profile }) {
           status: "todo",
           deadline: new Date(Date.now() + hours * H).toISOString(),
           created_by: profile.id,
+          image_url: imageUrl,
         })
         .select()
         .single();
@@ -85,6 +109,27 @@ export default function NewTaskSheet({ onClose, profile }) {
             color={d.color}
           />
         ))}
+      </div>
+
+      <label style={labelStyle}>Ảnh đính kèm (tùy chọn)</label>
+      <div style={{ marginBottom: 18 }}>
+        {imagePreview ? (
+          <div style={{ position: "relative", width: 120 }}>
+            <img src={imagePreview} alt="" style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 12, border: `1px solid ${COLORS.border}` }} />
+            <button
+              onClick={clearImage}
+              style={{ position: "absolute", top: -8, right: -8, background: COLORS.red, border: "none", borderRadius: "50%", width: 24, height: 24, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: 120, height: 120, borderRadius: 12, border: `1px dashed ${COLORS.border}`, color: COLORS.faint, cursor: "pointer", fontSize: 12, flexDirection: "column" }}>
+            <ImageIcon size={22} />
+            Chọn ảnh
+            <input type="file" accept="image/*" onChange={handlePickImage} style={{ display: "none" }} />
+          </label>
+        )}
       </div>
 
       <label style={labelStyle}>Hạn chót: trong {hours} giờ</label>

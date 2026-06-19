@@ -124,6 +124,15 @@ export default function DetailSheet({ task: initialTask, profile, onClose }) {
           )}
         </div>
 
+        {task.image_url && (
+          <img
+            src={task.image_url}
+            alt=""
+            onClick={() => window.open(task.image_url, "_blank")}
+            style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 12, border: `1px solid ${COLORS.border}`, marginBottom: 16, cursor: "pointer" }}
+          />
+        )}
+
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
           <Meta label="Bộ phận hiện tại" value={dept?.name} color={dept?.color} />
           <Meta label="Người tạo" value={task.profiles?.full_name} />
