@@ -1,11 +1,12 @@
 // TaskHub - Màn hình chính kết nối Supabase thật
 // Giữ nguyên phong cách thiết kế bản demo: nền tối #14110D, accent vàng #C9A227
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Clock, AlertTriangle, MessageSquare, CheckCircle2, Circle, Loader, Bell, LogOut } from "lucide-react";
+import { Plus, Clock, AlertTriangle, MessageSquare, CheckCircle2, Circle, Loader, Bell, LogOut, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { Stat, Chip, COLORS } from "./ui";
 import NewTaskSheet from "./NewTaskSheet";
 import DetailSheet from "./DetailSheet";
+import AdminScreen from "./AdminScreen";
 import { usePushNotification } from "../hooks/usePushNotification";
 
 const H = 3600000, D = 86400000;
@@ -27,6 +28,7 @@ export default function TaskHub({ profile, onSignOut }) {
   const [filterDept, setFilterDept] = useState("all");
   const [showNew, setShowNew] = useState(false);
   const [openTask, setOpenTask] = useState(null);
+  const [showAdmin, setShowAdmin] = useState(false);
   const { permission, requestAndSubscribe } = usePushNotification(profile?.id);
 
   // Lấy dữ liệu ban đầu
@@ -89,6 +91,16 @@ export default function TaskHub({ profile, onSignOut }) {
               <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "Georgia, serif", marginTop: 2 }}>TaskHub</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+              {/* Nút Quản trị - chỉ hiện cho admin */}
+              {profile?.role === "admin" && (
+                <button
+                  onClick={() => setShowAdmin(true)}
+                  title="Quản trị"
+                  style={{ background: COLORS.red + "22", border: `1px solid ${COLORS.red}44`, color: COLORS.red, borderRadius: 10, padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}
+                >
+                  <ShieldCheck size={14} />Quản trị
+                </button>
+              )}
               {/* Nút bật push notification */}
               {permission !== "granted" && (
                 <button
@@ -212,6 +224,7 @@ export default function TaskHub({ profile, onSignOut }) {
 
         {showNew && <NewTaskSheet onClose={() => setShowNew(false)} profile={profile} />}
         {openTask && <DetailSheet task={openTask} profile={profile} onClose={() => setOpenTask(null)} />}
+        {showAdmin && <AdminScreen onClose={() => setShowAdmin(false)} />}
       </div>
     </div>
   );
