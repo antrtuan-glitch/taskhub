@@ -1,8 +1,8 @@
 // Màn hình Quản trị (chỉ admin) - 3 tab: Nhân viên / Task / Báo cáo
 import { useState, useEffect } from "react";
-import { ChevronLeft, Trash2, GitBranch, Users, ListChecks, BarChart3 } from "lucide-react";
+import { ChevronLeft, Trash2, GitBranch, Users, ListChecks, BarChart3, UserPlus } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { COLORS, Sheet, Meta } from "./ui";
+import { COLORS, Sheet, Meta, inputStyle, labelStyle, PrimaryButton, Chip } from "./ui";
 
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -57,6 +57,62 @@ function ConfirmDialog({ title, onConfirm, onCancel }) {
   );
 }
 
+function CreateStaffForm({ departments, onCreated }) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [deptId, setDeptId] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleCreate() {
+    setError("");
+    setLoading(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      const { data, error: fnErr } = await supabase.functions.invoke("admin-create-user", {
+        body: { email, password, full_name: fullName.trim(), department_id: deptId || null },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (fnErr) throw fnErr;
+      if (data?.error) throw new Error(data.error);
+      setFullName(""); setEmail(""); setPassword(""); setDeptId("");
+      onCreated();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const canSubmit = fullName.trim() && email && password.length >= 6;
+
+  return (
+    <div style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 14, marginBottom: 6 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+        <UserPlus size={15} />Tạo tài khoản nhân viên
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Họ tên" style={inputStyle} />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" style={inputStyle} />
+        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Mật khẩu (ít nhất 6 ký tự)" style={inputStyle} />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {departments.map((d) => (
+            <Chip key={d.id} active={deptId === d.id} onClick={() => setDeptId(deptId === d.id ? "" : d.id)} label={d.name} dot={d.color} color={d.color} />
+          ))}
+        </div>
+        {error && (
+          <div style={{ background: "#B5563E22", border: "1px solid #B5563E44", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#E08070" }}>{error}</div>
+        )}
+        <PrimaryButton onClick={handleCreate} disabled={!canSubmit || loading}>
+          {loading ? "Đang tạo..." : "Tạo tài khoản"}
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
 function StaffTab() {
   const [staff, setStaff] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -88,6 +144,7 @@ function StaffTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <CreateStaffForm departments={departments} onCreated={load} />
       {staff.map((s) => (
         <div key={s.id} style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
