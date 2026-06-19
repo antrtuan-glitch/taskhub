@@ -104,7 +104,13 @@ export default function TaskHub({ profile, onSignOut }) {
               {/* Nút bật push notification */}
               {permission !== "granted" && (
                 <button
-                  onClick={requestAndSubscribe}
+                  onClick={() => {
+                    if (permission === "unsupported") {
+                      alert("Trình duyệt này không hỗ trợ thông báo. Trên iPhone: bấm icon Share trong Safari → \"Thêm vào màn hình chính\" → mở app từ icon đó rồi bật lại.");
+                      return;
+                    }
+                    requestAndSubscribe();
+                  }}
                   title="Bật thông báo"
                   style={{ background: COLORS.gold + "22", border: `1px solid ${COLORS.gold}44`, color: COLORS.gold, borderRadius: 10, padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}
                 >
