@@ -1,6 +1,6 @@
 // Màn hình Quản trị (chỉ admin) - 3 tab: Nhân viên / Task / Báo cáo
 import { useState, useEffect } from "react";
-import { ChevronLeft, Trash2, GitBranch, Users, ListChecks, BarChart3, UserPlus } from "lucide-react";
+import { ChevronLeft, Trash2, GitBranch, Users, ListChecks, BarChart3, UserPlus, FolderPlus } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { COLORS, Sheet, Meta, inputStyle, labelStyle, PrimaryButton, Chip } from "./ui";
 
@@ -113,6 +113,72 @@ function CreateStaffForm({ departments, onCreated }) {
   );
 }
 
+function slugify(name) {
+  return name
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 30);
+}
+
+const DEPT_COLORS = ["#C9A227", "#3A7CA5", "#B5563E", "#5E5240", "#6A8D73", "#8E5BA6", "#4A7A6B"];
+
+function DepartmentManager({ departments, onChanged }) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleCreate() {
+    setError("");
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const id = slugify(trimmed);
+    if (!id) { setError("Tên bộ phận không hợp lệ"); return; }
+    setLoading(true);
+    const color = DEPT_COLORS[departments.length % DEPT_COLORS.length];
+    const { error: err } = await supabase.from("departments").insert({ id, name: trimmed, color });
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    setName("");
+    onChanged();
+  }
+
+  async function deleteDept(id) {
+    await supabase.from("departments").delete().eq("id", id);
+    onChanged();
+  }
+
+  return (
+    <div style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 14, marginBottom: 6 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+        <FolderPlus size={15} />Quản lý bộ phận
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        {departments.map((d) => (
+          <span key={d.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: d.color, background: d.color + "1A", padding: "5px 10px", borderRadius: 20 }}>
+            {d.name}
+            <Trash2 size={12} style={{ cursor: "pointer" }} onClick={() => deleteDept(d.id)} />
+          </span>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+          placeholder="Tên bộ phận mới"
+          style={{ ...inputStyle, flex: 1 }}
+        />
+        <button onClick={handleCreate} disabled={loading} style={{ background: COLORS.gold, border: "none", color: COLORS.bg, borderRadius: 10, padding: "0 16px", fontWeight: 700, cursor: "pointer" }}>
+          Thêm
+        </button>
+      </div>
+      {error && <div style={{ fontSize: 12, color: "#E08070", marginTop: 8 }}>{error}</div>}
+      <div style={{ fontSize: 11, color: COLORS.faint, marginTop: 8 }}>Lưu ý: xóa bộ phận sẽ ảnh hưởng đến task/nhân viên đang gắn với bộ phận đó.</div>
+    </div>
+  );
+}
+
 function StaffTab() {
   const [staff, setStaff] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -120,8 +186,13 @@ function StaffTab() {
 
   useEffect(() => {
     load();
-    supabase.from("departments").select("*").then(({ data }) => data && setDepartments(data));
+    loadDepartments();
   }, []);
+
+  async function loadDepartments() {
+    const { data } = await supabase.from("departments").select("*").order("name");
+    if (data) setDepartments(data);
+  }
 
   async function load() {
     const { data } = await supabase
@@ -144,6 +215,7 @@ function StaffTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <DepartmentManager departments={departments} onChanged={loadDepartments} />
       <CreateStaffForm departments={departments} onCreated={load} />
       {staff.map((s) => (
         <div key={s.id} style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 12 }}>
