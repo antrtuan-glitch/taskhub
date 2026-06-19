@@ -11,6 +11,8 @@ export default defineConfig({
       strategies: "generateSW",
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Nạp thêm code xử lý push notification vào service worker tự sinh
+        importScripts: ["push-handlers.js"],
         // Không cache Supabase API calls
         navigateFallback: "/index.html",
         runtimeCaching: [
