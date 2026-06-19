@@ -14,13 +14,23 @@ const VAPID_EMAIL = Deno.env.get("VAPID_EMAIL") ?? "mailto:admin@taskhub.app";
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req) => {
-  // Database Webhook gửi POST với body là record mới
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Gọi trực tiếp từ client (record trong body) hoặc qua Database Webhook (cũng body.record)
   const body = await req.json();
   const handoff = body.record;
 
   if (!handoff?.to_department_id || !handoff?.task_id) {
-    return new Response("ok", { status: 200 });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -47,7 +57,7 @@ Deno.serve(async (req) => {
     .not("push_subscription", "is", null);
 
   if (!profiles?.length) {
-    return new Response("no subscribers", { status: 200 });
+    return new Response("no subscribers", { status: 200, headers: corsHeaders });
   }
 
   const payload = JSON.stringify({
@@ -68,6 +78,6 @@ Deno.serve(async (req) => {
   const failed = results.filter((r) => r.status === "rejected").length;
   return new Response(
     JSON.stringify({ sent: results.length - failed, failed }),
-    { headers: { "Content-Type": "application/json" } }
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 });

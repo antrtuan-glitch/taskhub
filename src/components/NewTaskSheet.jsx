@@ -36,14 +36,23 @@ export default function NewTaskSheet({ onClose, profile }) {
         .single();
       if (err) throw err;
 
-      // Tạo dòng "khởi tạo" trong lịch sử bàn giao để kích hoạt thông báo cho bộ phận được giao
-      await supabase.from("task_handoffs").insert({
-        task_id: task.id,
-        from_department_id: null,
-        to_department_id: deptId,
-        handed_by: profile.id,
-        note: "Khởi tạo công việc",
-      });
+      // Tạo dòng "khởi tạo" trong lịch sử bàn giao để hiện trong timeline
+      const { data: handoff } = await supabase
+        .from("task_handoffs")
+        .insert({
+          task_id: task.id,
+          from_department_id: null,
+          to_department_id: deptId,
+          handed_by: profile.id,
+          note: "Khởi tạo công việc",
+        })
+        .select()
+        .single();
+
+      // Gửi thông báo đẩy cho bộ phận được giao (không chặn nếu lỗi)
+      if (handoff) {
+        supabase.functions.invoke("push-notify", { body: { record: handoff } }).catch(() => {});
+      }
 
       onClose();
     } catch (err) {

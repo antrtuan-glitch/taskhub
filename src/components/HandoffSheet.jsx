@@ -24,14 +24,23 @@ export default function HandoffSheet({ task, profile, onClose }) {
     setError("");
     try {
       // Ghi lịch sử bàn giao
-      const { error: hErr } = await supabase.from("task_handoffs").insert({
-        task_id: task.id,
-        from_department_id: task.current_department_id,
-        to_department_id: complete ? null : toDeptId,
-        handed_by: profile.id,
-        note: note.trim() || null,
-      });
+      const { data: handoff, error: hErr } = await supabase
+        .from("task_handoffs")
+        .insert({
+          task_id: task.id,
+          from_department_id: task.current_department_id,
+          to_department_id: complete ? null : toDeptId,
+          handed_by: profile.id,
+          note: note.trim() || null,
+        })
+        .select()
+        .single();
       if (hErr) throw hErr;
+
+      // Gửi thông báo đẩy cho bộ phận nhận (không chặn nếu lỗi)
+      if (handoff && !complete) {
+        supabase.functions.invoke("push-notify", { body: { record: handoff } }).catch(() => {});
+      }
 
       if (complete) {
         // Đánh dấu hoàn toàn xong
