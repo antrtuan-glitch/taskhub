@@ -1,6 +1,6 @@
 {
-  "name": "TaskHub - Vận hành Khách sạn",
-  "short_name": "TaskHub",
+  "name": "Emerald Task",
+  "short_name": "Emerald Task",
   "description": "Quản lý công việc liên bộ phận khách sạn",
   "start_url": "/",
   "display": "standalone",
