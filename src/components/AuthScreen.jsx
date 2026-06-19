@@ -27,7 +27,7 @@ export default function AuthScreen({ onDone }) {
     setLoading(true);
     try {
       if (mode === "register") {
-        if (!fullName.trim() || !deptId) throw new Error("Vui lòng nhập đầy đủ tên và chọn bộ phận");
+        if (!fullName.trim()) throw new Error("Vui lòng nhập họ tên");
         const { data, error: signUpErr } = await supabase.auth.signUp({ email, password });
         if (signUpErr) throw signUpErr;
 
@@ -35,7 +35,7 @@ export default function AuthScreen({ onDone }) {
           const { error: pErr } = await supabase.from("profiles").insert({
             id: data.user.id,
             full_name: fullName.trim(),
-            department_id: deptId,
+            department_id: deptId || null,
           });
           if (pErr) throw pErr;
         }
@@ -52,7 +52,7 @@ export default function AuthScreen({ onDone }) {
     }
   }
 
-  const canSubmit = email && password.length >= 6 && (mode === "login" || (fullName && deptId));
+  const canSubmit = email && password.length >= 6 && (mode === "login" || fullName);
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", justifyContent: "center", alignItems: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -80,7 +80,7 @@ export default function AuthScreen({ onDone }) {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Bộ phận của bạn</label>
+                <label style={labelStyle}>Bộ phận của bạn (không bắt buộc với admin)</label>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {departments.map((d) => (
                     <Chip
