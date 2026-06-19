@@ -35,18 +35,13 @@ export function useAuth() {
   }
 
   async function signUp(email, password, fullName, departmentId) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Profile được tạo tự động bằng trigger on_auth_user_created (xem migration 003)
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName, department_id: departmentId || null } },
+    });
     if (error) throw error;
-
-    // Tạo profile ngay sau khi đăng ký
-    if (data.user) {
-      const { error: pErr } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        full_name: fullName,
-        department_id: departmentId,
-      });
-      if (pErr) throw pErr;
-    }
     return data;
   }
 

@@ -28,17 +28,12 @@ export default function AuthScreen({ onDone }) {
     try {
       if (mode === "register") {
         if (!fullName.trim()) throw new Error("Vui lòng nhập họ tên");
-        const { data, error: signUpErr } = await supabase.auth.signUp({ email, password });
+        const { error: signUpErr } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName.trim(), department_id: deptId || null } },
+        });
         if (signUpErr) throw signUpErr;
-
-        if (data.user) {
-          const { error: pErr } = await supabase.from("profiles").insert({
-            id: data.user.id,
-            full_name: fullName.trim(),
-            department_id: deptId || null,
-          });
-          if (pErr) throw pErr;
-        }
         setMessage("Đăng ký thành công! Kiểm tra email để xác nhận tài khoản, rồi đăng nhập lại.");
       } else {
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
